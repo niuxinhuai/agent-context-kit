@@ -7,9 +7,13 @@ const MANAGED_START = "<!-- agent-context-kit:start -->";
 const MANAGED_END = "<!-- agent-context-kit:end -->";
 const DEFAULT_TARGET = "agents";
 const SUPPORTED_TARGETS = new Set(["agents", "claude", "cursor", "codex", "docs", "all"]);
+const SUPPORTED_PRESETS = new Set(["node", "python", "harmony", "flutter"]);
 
 export async function generateRepositoryContext(root, options = {}) {
-  const scan = await scanRepository(root);
+  const scan = {
+    ...(await scanRepository(root)),
+    preset: normalizePreset(options.preset)
+  };
   const targets = buildTargets(scan, options.target ?? DEFAULT_TARGET);
 
   const files = [];
@@ -43,6 +47,18 @@ export async function generateRepositoryContext(root, options = {}) {
 
 export function getSupportedTargets() {
   return [...SUPPORTED_TARGETS];
+}
+
+export function getSupportedPresets() {
+  return [...SUPPORTED_PRESETS];
+}
+
+function normalizePreset(preset) {
+  if (!preset) return undefined;
+  if (!SUPPORTED_PRESETS.has(preset)) {
+    throw new Error(`Unknown preset "${preset}". Supported presets: ${getSupportedPresets().join(", ")}.`);
+  }
+  return preset;
 }
 
 function buildTargets(scan, target) {

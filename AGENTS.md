@@ -30,6 +30,14 @@ This file is the first stop for AI coding agents working in this repository.
 
 - `docs/README.md`
 
+
+## Node Preset
+
+- Use the package manager detected from lockfiles or `package.json`.
+- Keep `node_modules/`, `dist/`, and `coverage/` out of Git unless explicitly required.
+- Prefer existing `package.json` scripts for build, test, lint, and dev workflows.
+
+
 ## Do Not
 
 - Do not edit generated files unless the task explicitly says to update the generator.

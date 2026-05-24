@@ -1,6 +1,6 @@
 import { runDoctor } from "./doctor.js";
 import { exists } from "./fs-utils.js";
-import { generateRepositoryContext, getSupportedTargets } from "./generator.js";
+import { generateRepositoryContext, getSupportedPresets, getSupportedTargets } from "./generator.js";
 import { scanRepository } from "./scanner.js";
 import path from "node:path";
 
@@ -46,6 +46,7 @@ function parseOptions(args) {
     dryRun: false,
     strict: false,
     target: undefined,
+    preset: undefined,
     cwd: undefined
   };
 
@@ -67,6 +68,13 @@ function parseOptions(args) {
       }
       options.target = value;
       index += 1;
+    } else if (arg === "--preset") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--preset requires a value.");
+      }
+      options.preset = value;
+      index += 1;
     } else if (arg === "--cwd") {
       const value = args[index + 1];
       if (!value) {
@@ -87,6 +95,7 @@ async function initCommand(cwd, options) {
     force: options.force,
     dryRun: options.dryRun,
     target: options.target,
+    preset: options.preset,
     mode: "init"
   });
 
@@ -98,6 +107,7 @@ async function updateCommand(cwd, options) {
     force: true,
     dryRun: options.dryRun,
     target: options.target,
+    preset: options.preset,
     mode: "update"
   });
 
@@ -249,6 +259,7 @@ function helpCommand() {
 Usage:
   agent-context-kit init [--force] [--dry-run] [--cwd <path>]
   agent-context-kit init [--target agents|claude|cursor|codex|all] [--cwd <path>]
+  agent-context-kit init [--preset node|python|harmony|flutter] [--cwd <path>]
   agent-context-kit update [--target agents|claude|cursor|codex|all] [--dry-run] [--cwd <path>]
   agent-context-kit scan [--json] [--cwd <path>]
   agent-context-kit doctor [--json] [--strict] [--cwd <path>]
@@ -265,5 +276,8 @@ Commands:
 
 Targets:
   ${getSupportedTargets().join(", ")}
+
+Presets:
+  ${getSupportedPresets().join(", ")}
 `);
 }

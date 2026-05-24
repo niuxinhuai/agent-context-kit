@@ -162,3 +162,23 @@ test("init with target all writes every supported AI context target", async () =
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("init with harmony preset adds HarmonyOS-specific guidance", async () => {
+  const root = await createRepo();
+
+  try {
+    const result = await generateRepositoryContext(root, { mode: "init", preset: "harmony" });
+    const agents = await readFile(path.join(root, "AGENTS.md"), "utf8");
+
+    assert.deepEqual(
+      result.files.map((file) => path.relative(root, file.path)),
+      ["AGENTS.md", path.join("docs", "README.md")]
+    );
+    assert.match(agents, /## HarmonyOS Preset/);
+    assert.match(agents, /ohpm/);
+    assert.match(agents, /oh-package-lock\.json5/);
+    assert.match(agents, /entry\/src\/main\/ets\/generated\//);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

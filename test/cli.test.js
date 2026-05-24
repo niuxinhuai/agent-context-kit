@@ -156,3 +156,20 @@ test("report --json prints parseable context with doctor warnings", async () => 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("init --preset python writes Python-specific guidance", async () => {
+  const root = await createRepo();
+
+  try {
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "init", "--preset", "python", "--cwd", root]);
+    const agents = await readFile(path.join(root, "AGENTS.md"), "utf8");
+
+    assert.match(stdout, /AGENTS\.md/);
+    assert.match(agents, /## Python Preset/);
+    assert.match(agents, /\.venv\//);
+    assert.match(agents, /pytest/);
+    assert.match(agents, /ruff/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

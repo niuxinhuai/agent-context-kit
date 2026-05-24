@@ -59,6 +59,10 @@ agent-context-kit init --target claude
 agent-context-kit init --target cursor
 agent-context-kit init --target codex
 agent-context-kit init --target all
+agent-context-kit init --preset node
+agent-context-kit init --preset python
+agent-context-kit init --preset harmony
+agent-context-kit init --preset flutter
 ```
 
 Targets:
@@ -68,6 +72,13 @@ Targets:
 - `cursor`: `.cursor/rules/agent-context.mdc`
 - `codex`: `.codex/AGENTS.md`
 - `all`: every supported target
+
+Presets add stack-specific guidance to generated context files:
+
+- `node`: package scripts, `node_modules/`, `dist/`, `coverage/`
+- `python`: `.venv/`, `pytest`, `ruff`, `pyproject.toml`
+- `harmony`: `ohpm`, `oh-package-lock.json5`, ArkTS generated files
+- `flutter`: `flutter pub get`, `pubspec.yaml`, build outputs
 
 ### `scan`
 

@@ -4,6 +4,7 @@ export function renderAgentsMd(scan) {
   const docs = scan.docs.length
     ? scan.docs.map((doc) => `- \`docs/${doc}\``).join("\n")
     : "- No existing docs were detected. Start with `docs/README.md`.";
+  const presetGuidance = renderPresetGuidance(scan.preset);
 
   return `# AGENTS.md
 
@@ -35,6 +36,7 @@ This file is the first stop for AI coding agents working in this repository.
 ## Documentation Index
 
 ${docs}
+${presetGuidance}
 
 ## Do Not
 
@@ -128,6 +130,8 @@ function installCommand(packageManager) {
 }
 
 function renderAgentInstructions(scan, title, agentName) {
+  const presetGuidance = renderPresetGuidance(scan.preset);
+
   return `# ${title}
 
 This file gives ${agentName} the repository context needed before editing code.
@@ -138,6 +142,7 @@ This file gives ${agentName} the repository context needed before editing code.
 - Stack: ${scan.stack.length ? scan.stack.join(" / ") : "not detected yet"}
 - Primary package manager: ${scan.primaryPackageManager ?? scan.packageManager ?? "not detected"}
 - Test command: ${scan.commands.test ?? "not detected; document this when known"}
+${presetGuidance}
 
 ## Working Rules
 
@@ -147,4 +152,50 @@ This file gives ${agentName} the repository context needed before editing code.
 - Run the smallest meaningful verification command before handing off.
 - Do not commit secrets, local environment files, build artifacts, or generated files unless explicitly requested.
 `;
+}
+
+function renderPresetGuidance(preset) {
+  switch (preset) {
+    case "node":
+      return `
+
+## Node Preset
+
+- Use the package manager detected from lockfiles or \`package.json\`.
+- Keep \`node_modules/\`, \`dist/\`, and \`coverage/\` out of Git unless explicitly required.
+- Prefer existing \`package.json\` scripts for build, test, lint, and dev workflows.
+`;
+    case "python":
+      return `
+
+## Python Preset
+
+- Keep virtual environments such as \`.venv/\` out of Git.
+- Prefer \`pytest\` for tests when available.
+- Prefer \`ruff\` for linting and formatting when available.
+- Treat \`pyproject.toml\` as the source of package and tooling configuration.
+`;
+    case "harmony":
+      return `
+
+## HarmonyOS Preset
+
+- Use \`ohpm\` for package management.
+- Do not commit \`oh-package-lock.json5\` unless this repository explicitly tracks it.
+- Do not manually edit \`entry/src/main/ets/generated/\`.
+- New ArkUI pages should include route annotations when the app router requires them.
+`;
+    case "flutter":
+      return `
+
+## Flutter Preset
+
+- Use \`flutter pub get\` after dependency changes.
+- Keep generated build output out of Git.
+- Use existing \`pubspec.yaml\` scripts, assets, and platform directory conventions.
+- If \`build_runner\` is used, document the generation command before changing generated files.
+`;
+    default:
+      return "";
+  }
 }
