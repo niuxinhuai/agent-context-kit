@@ -39,3 +39,31 @@ test("scanRepository detects package metadata and scripts", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("scanRepository reports multiple package managers in mixed repositories", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "ackit-"));
+
+  try {
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "mixed-demo",
+        scripts: {
+          test: "node --test"
+        }
+      }),
+      "utf8"
+    );
+    await writeFile(path.join(root, "pyproject.toml"), "[project]\nname = \"mixed-demo\"\n", "utf8");
+    await writeFile(path.join(root, "go.mod"), "module example.com/mixed-demo\n", "utf8");
+
+    const result = await scanRepository(root);
+
+    assert.equal(result.primaryPackageManager, "npm");
+    assert.deepEqual(result.packageManagers, ["npm", "python", "go"]);
+    assert.equal(result.packageManager, "npm");
+    assert.deepEqual(result.stack, ["Node.js", "Python", "Go"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -8,7 +8,8 @@ This file is the first stop for AI coding agents working in this repository.
 - Project: agent-context-kit
 - Repository root: current working directory
 - Detected stack: Node.js
-- Package manager: npm
+- Primary package manager: npm
+- Package managers: npm
 
 ## Start Here
 

@@ -45,15 +45,19 @@ export async function scanRepository(root) {
   if (await exists(ohPackagePath)) stack.push("HarmonyOS ArkTS");
   if (topLevel.some((entry) => entry.name === "pubspec.yaml")) stack.push("Flutter/Dart");
 
-  const packageManager = await detectPackageManager(resolvedRoot);
-  const commands = detectCommands(packageJson, packageManager);
+  const packageManagers = await detectPackageManagers(resolvedRoot);
+  const primaryPackageManager = packageManagers[0];
+  const commands = detectCommands(packageJson, primaryPackageManager);
 
   return {
     name: packageJson?.name ?? path.basename(resolvedRoot),
     root: resolvedRoot,
     stack: [...new Set(stack)],
-    packageManager,
+    packageManager: primaryPackageManager,
+    primaryPackageManager,
+    packageManagers,
     commands,
+    scripts: packageJson?.scripts ?? {},
     docs,
     directories: topLevel.filter((entry) => entry.isDirectory()).map((entry) => entry.name),
     paths: {
@@ -76,7 +80,7 @@ function detectCommands(packageJson, packageManager) {
   };
 }
 
-async function detectPackageManager(root) {
+async function detectPackageManagers(root) {
   const candidates = [
     ["pnpm-lock.yaml", "pnpm"],
     ["yarn.lock", "yarn"],
@@ -84,22 +88,23 @@ async function detectPackageManager(root) {
     ["bun.lockb", "bun"],
     ["oh-package.json5", "ohpm"],
     ["pubspec.yaml", "flutter"],
+    ["pyproject.toml", "python"],
     ["Cargo.toml", "cargo"],
-    ["go.mod", "go"],
-    ["pyproject.toml", "python"]
+    ["go.mod", "go"]
   ];
+  const managers = [];
 
   for (const [fileName, manager] of candidates) {
     if (await exists(path.join(root, fileName))) {
-      return manager;
+      managers.push(manager);
     }
   }
 
-  if (await exists(path.join(root, "package.json"))) {
-    return "npm";
+  if ((await exists(path.join(root, "package.json"))) && !managers.some((manager) => ["npm", "pnpm", "yarn", "bun"].includes(manager))) {
+    managers.unshift("npm");
   }
 
-  return undefined;
+  return [...new Set(managers)];
 }
 
 async function discoverDocs(root) {

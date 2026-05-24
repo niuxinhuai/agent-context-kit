@@ -96,7 +96,8 @@ async function scanCommand(cwd, options) {
   console.log(`Repository: ${result.name}`);
   console.log(`Root: ${result.root}`);
   console.log(`Detected stack: ${result.stack.length ? result.stack.join(", ") : "unknown"}`);
-  console.log(`Package manager: ${result.packageManager ?? "unknown"}`);
+  console.log(`Primary package manager: ${result.primaryPackageManager ?? "unknown"}`);
+  console.log(`Package managers: ${result.packageManagers.length ? result.packageManagers.join(", ") : "unknown"}`);
   console.log(`Build command: ${result.commands.build ?? "not detected"}`);
   console.log(`Test command: ${result.commands.test ?? "not detected"}`);
   console.log(`Docs: ${result.docs.length ? result.docs.join(", ") : "none detected"}`);

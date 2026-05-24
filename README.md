@@ -1,5 +1,7 @@
 # agent-context-kit
 
+[![CI](https://github.com/niuxinhuai/agent-context-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/niuxinhuai/agent-context-kit/actions/workflows/ci.yml)
+
 Make your repository understandable to AI coding agents in 60 seconds.
 
 `agent-context-kit` generates and maintains the context files that tools like Codex, Claude Code, Cursor, and other AI coding agents need before they safely edit a codebase.
@@ -65,7 +67,7 @@ agent-context-kit scan --json
 Current detection includes:
 
 - project name
-- package manager
+- primary package manager and additional package managers
 - framework and language hints
 - build/test/lint/dev commands
 - existing docs under `docs/`

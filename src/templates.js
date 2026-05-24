@@ -1,5 +1,6 @@
 export function renderAgentsMd(scan) {
   const stack = scan.stack.length ? scan.stack.join(" / ") : "not detected yet";
+  const packageManagers = scan.packageManagers?.length ? scan.packageManagers.join(", ") : "not detected";
   const docs = scan.docs.length
     ? scan.docs.map((doc) => `- \`docs/${doc}\``).join("\n")
     : "- No existing docs were detected. Start with `docs/README.md`.";
@@ -13,7 +14,8 @@ This file is the first stop for AI coding agents working in this repository.
 - Project: ${scan.name}
 - Repository root: current working directory
 - Detected stack: ${stack}
-- Package manager: ${scan.packageManager ?? "not detected"}
+- Primary package manager: ${scan.primaryPackageManager ?? scan.packageManager ?? "not detected"}
+- Package managers: ${packageManagers}
 
 ## Start Here
 
