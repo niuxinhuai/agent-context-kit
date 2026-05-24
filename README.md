@@ -37,6 +37,7 @@ npx agent-context-kit init
 agent-context-kit init
 agent-context-kit scan
 agent-context-kit doctor
+agent-context-kit explain
 agent-context-kit update
 ```
 
@@ -79,6 +80,18 @@ Checks whether AI-facing context is missing or likely incomplete:
 ```bash
 agent-context-kit doctor
 agent-context-kit doctor --json
+agent-context-kit doctor --strict
+```
+
+Use `--strict` in CI when warnings should fail the job.
+
+### `explain`
+
+Prints a concise summary for humans and AI agents:
+
+```bash
+agent-context-kit explain
+agent-context-kit explain --json
 ```
 
 ### `update`

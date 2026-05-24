@@ -2,7 +2,7 @@ import { runDoctor } from "./doctor.js";
 import { generateRepositoryContext } from "./generator.js";
 import { scanRepository } from "./scanner.js";
 
-const COMMANDS = new Set(["init", "scan", "doctor", "update", "help", "--help", "-h"]);
+const COMMANDS = new Set(["init", "scan", "doctor", "update", "explain", "help", "--help", "-h"]);
 
 export async function runCli(argv) {
   const args = argv.slice(2);
@@ -22,6 +22,8 @@ export async function runCli(argv) {
       return scanCommand(cwd, options);
     case "doctor":
       return doctorCommand(cwd, options);
+    case "explain":
+      return explainCommand(cwd, options);
     case "update":
       return updateCommand(cwd, options);
     case "help":
@@ -38,6 +40,7 @@ function parseOptions(args) {
     force: false,
     json: false,
     dryRun: false,
+    strict: false,
     cwd: undefined
   };
 
@@ -50,6 +53,8 @@ function parseOptions(args) {
       options.json = true;
     } else if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--strict") {
+      options.strict = true;
     } else if (arg === "--cwd") {
       const value = args[index + 1];
       if (!value) {
@@ -122,6 +127,31 @@ async function doctorCommand(cwd, options) {
       console.log(`  fix: ${issue.fix}`);
     }
   }
+
+  if (options.strict && result.issues.some((issue) => issue.severity === "warn")) {
+    console.log("Strict mode failed: warnings were found.");
+    process.exitCode = 1;
+  }
+}
+
+async function explainCommand(cwd, options) {
+  const result = await scanRepository(cwd);
+  const summary = {
+    repository: result.name,
+    stack: result.stack.length ? result.stack.join(", ") : "unknown stack",
+    packageManager: result.primaryPackageManager ?? "unknown package manager",
+    testCommand: result.commands.test ?? "no test command detected",
+    contextFiles: ["AGENTS.md", "docs/README.md"]
+  };
+
+  if (options.json) {
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+
+  console.log(`${summary.repository} appears to be a ${summary.stack} project using ${summary.packageManager}.`);
+  console.log(`Use ${summary.testCommand} for verification.`);
+  console.log(`AI context is managed in ${summary.contextFiles.join(" and ")}.`);
 }
 
 function printGenerationResult(result, options) {
@@ -143,12 +173,14 @@ Usage:
   agent-context-kit init [--force] [--dry-run] [--cwd <path>]
   agent-context-kit update [--dry-run] [--cwd <path>]
   agent-context-kit scan [--json] [--cwd <path>]
-  agent-context-kit doctor [--json] [--cwd <path>]
+  agent-context-kit doctor [--json] [--strict] [--cwd <path>]
+  agent-context-kit explain [--json] [--cwd <path>]
 
 Commands:
   init     Generate AGENTS.md and docs/README.md without overwriting existing files.
   update   Regenerate managed context files.
   scan     Print detected project stack, package manager, commands, and docs.
   doctor   Check whether AI-facing context files are missing or inconsistent.
+  explain  Print a short human-readable repository summary.
 `);
 }

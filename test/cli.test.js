@@ -56,3 +56,44 @@ test("init does not overwrite existing context files by default", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("explain prints a concise repository summary", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(path.join(root, "AGENTS.md"), "# AGENTS.md\n\n## Do Not\n", "utf8");
+
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "explain", "--cwd", root]);
+
+    assert.match(stdout, /cli-demo/);
+    assert.match(stdout, /Node\.js/);
+    assert.match(stdout, /npm test/);
+    assert.match(stdout, /AGENTS\.md/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("doctor --strict exits non-zero when warnings are found", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(
+      path.join(root, "AGENTS.md"),
+      "# AGENTS.md\n\nLocal path: /Users/alice/private-repo\n\n## Do Not\n",
+      "utf8"
+    );
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [cliPath, "doctor", "--strict", "--cwd", root]),
+      (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stdout, /AGENTS\.md appears to contain a local absolute path/);
+        assert.match(error.stdout, /Strict mode failed/);
+        return true;
+      }
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
