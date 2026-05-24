@@ -38,6 +38,7 @@ agent-context-kit init
 agent-context-kit scan
 agent-context-kit doctor
 agent-context-kit explain
+agent-context-kit report
 agent-context-kit update
 ```
 
@@ -106,6 +107,15 @@ Prints a concise summary for humans and AI agents:
 ```bash
 agent-context-kit explain
 agent-context-kit explain --json
+```
+
+### `report`
+
+Prints a copyable repository context report for issues, pull requests, and AI conversations:
+
+```bash
+agent-context-kit report
+agent-context-kit report --json
 ```
 
 ### `update`

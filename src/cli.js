@@ -1,8 +1,10 @@
 import { runDoctor } from "./doctor.js";
+import { exists } from "./fs-utils.js";
 import { generateRepositoryContext, getSupportedTargets } from "./generator.js";
 import { scanRepository } from "./scanner.js";
+import path from "node:path";
 
-const COMMANDS = new Set(["init", "scan", "doctor", "update", "explain", "help", "--help", "-h"]);
+const COMMANDS = new Set(["init", "scan", "doctor", "update", "explain", "report", "help", "--help", "-h"]);
 
 export async function runCli(argv) {
   const args = argv.slice(2);
@@ -24,6 +26,8 @@ export async function runCli(argv) {
       return doctorCommand(cwd, options);
     case "explain":
       return explainCommand(cwd, options);
+    case "report":
+      return reportCommand(cwd, options);
     case "update":
       return updateCommand(cwd, options);
     case "help":
@@ -164,6 +168,69 @@ async function explainCommand(cwd, options) {
   console.log(`AI context is managed in ${summary.contextFiles.join(" and ")}.`);
 }
 
+async function reportCommand(cwd, options) {
+  const result = await buildReport(cwd);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  console.log(renderMarkdownReport(result));
+}
+
+async function buildReport(cwd) {
+  const scan = await scanRepository(cwd);
+  const doctor = await runDoctor(cwd);
+  const doctorWarnings = doctor.issues.filter((issue) => issue.severity === "warn");
+
+  return {
+    repository: scan.name,
+    stack: scan.stack,
+    packageManagers: scan.packageManagers,
+    testCommand: scan.commands.test ?? null,
+    lintCommand: scan.commands.lint ?? null,
+    contextFiles: await detectContextFiles(scan.root),
+    doctorWarnings
+  };
+}
+
+async function detectContextFiles(root) {
+  const candidates = [
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".cursor/rules/agent-context.mdc",
+    ".codex/AGENTS.md",
+    "docs/README.md"
+  ];
+  const found = [];
+
+  for (const candidate of candidates) {
+    if (await exists(path.join(root, candidate))) {
+      found.push(candidate);
+    }
+  }
+
+  return found;
+}
+
+function renderMarkdownReport(result) {
+  const warnings = result.doctorWarnings.length
+    ? result.doctorWarnings.map((issue) => issue.message).join("; ")
+    : "none";
+
+  return [
+    "## Repository Context",
+    `- Repository: ${result.repository}`,
+    `- Stack: ${result.stack.length ? result.stack.join(", ") : "unknown"}`,
+    `- Package managers: ${result.packageManagers.length ? result.packageManagers.join(", ") : "unknown"}`,
+    `- Test: ${result.testCommand ?? "not detected"}`,
+    `- Lint: ${result.lintCommand ?? "not detected"}`,
+    `- AI context: ${result.contextFiles.length ? result.contextFiles.join(", ") : "none detected"}`,
+    `- Doctor warnings: ${warnings}`
+  ].join("\n");
+}
+
 function printGenerationResult(result, options) {
   if (options.json) {
     console.log(JSON.stringify(result, null, 2));
@@ -186,6 +253,7 @@ Usage:
   agent-context-kit scan [--json] [--cwd <path>]
   agent-context-kit doctor [--json] [--strict] [--cwd <path>]
   agent-context-kit explain [--json] [--cwd <path>]
+  agent-context-kit report [--json] [--cwd <path>]
 
 Commands:
   init     Generate AGENTS.md and docs/README.md without overwriting existing files.
@@ -193,6 +261,7 @@ Commands:
   scan     Print detected project stack, package manager, commands, and docs.
   doctor   Check whether AI-facing context files are missing or inconsistent.
   explain  Print a short human-readable repository summary.
+  report   Print a copyable repository context report.
 
 Targets:
   ${getSupportedTargets().join(", ")}

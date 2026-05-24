@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,6 +108,50 @@ test("init --target cursor writes Cursor rules", async () => {
     assert.match(stdout, /agent-context\.mdc/);
     assert.match(cursorRules, /description:/);
     assert.match(cursorRules, /agent-context-kit:start/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("report prints markdown repository context", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(path.join(root, "AGENTS.md"), "# AGENTS.md\n\n## Do Not\n", "utf8");
+    await mkdir(path.join(root, "docs"), { recursive: true });
+    await writeFile(path.join(root, "docs", "README.md"), "# Documentation\n", "utf8");
+
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", "--cwd", root]);
+
+    assert.match(stdout, /## Repository Context/);
+    assert.match(stdout, /- Repository: cli-demo/);
+    assert.match(stdout, /- Stack: Node\.js/);
+    assert.match(stdout, /- Test: npm test/);
+    assert.match(stdout, /- AI context: AGENTS\.md/);
+    assert.match(stdout, /- Doctor warnings: none/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("report --json prints parseable context with doctor warnings", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(
+      path.join(root, "AGENTS.md"),
+      "# AGENTS.md\n\nLocal path: /Users/alice/private-repo\n\n## Do Not\n",
+      "utf8"
+    );
+
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", "--json", "--cwd", root]);
+    const result = JSON.parse(stdout);
+
+    assert.equal(result.repository, "cli-demo");
+    assert.deepEqual(result.stack, ["Node.js"]);
+    assert.equal(result.testCommand, "npm test");
+    assert.ok(result.contextFiles.includes("AGENTS.md"));
+    assert.ok(result.doctorWarnings.some((issue) => issue.code === "local-absolute-path"));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
