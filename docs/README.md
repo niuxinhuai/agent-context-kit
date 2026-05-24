@@ -1,3 +1,4 @@
+<!-- agent-context-kit:start -->
 # Documentation
 
 This directory is the human and AI documentation index for `agent-context-kit`.
@@ -21,3 +22,4 @@ This directory is the human and AI documentation index for `agent-context-kit`.
 - Add new docs to this index when they become part of the normal workflow.
 - Keep command examples current with the package manifest.
 - Prefer task-focused docs over long catch-all documents.
+<!-- agent-context-kit:end -->

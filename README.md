@@ -81,12 +81,22 @@ agent-context-kit doctor --json
 
 ### `update`
 
-Regenerates managed context files:
+Regenerates managed sections in context files:
 
 ```bash
 agent-context-kit update
 agent-context-kit update --dry-run
 ```
+
+Generated files are wrapped in managed markers:
+
+```md
+<!-- agent-context-kit:start -->
+generated content
+<!-- agent-context-kit:end -->
+```
+
+`update` replaces only that block and preserves manual notes before or after it. If it sees an older generated file without markers, it migrates it to the managed block format.
 
 ## Example
 

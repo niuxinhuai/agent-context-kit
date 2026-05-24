@@ -1,3 +1,4 @@
+<!-- agent-context-kit:start -->
 # AGENTS.md
 
 This file is the first stop for AI coding agents working in this repository.
@@ -41,3 +42,4 @@ This file is the first stop for AI coding agents working in this repository.
 - Keep changes scoped to the requested behavior.
 - Update docs when public commands, setup steps, architecture, or extension points change.
 - Run the smallest meaningful verification command before handing off.
+<!-- agent-context-kit:end -->
