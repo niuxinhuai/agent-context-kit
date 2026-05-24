@@ -182,3 +182,44 @@ test("init with harmony preset adds HarmonyOS-specific guidance", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("init includes detected workspaces in AGENTS.md", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "workspace-demo",
+        workspaces: ["apps/*"],
+        scripts: {
+          test: "node --test"
+        }
+      }),
+      "utf8"
+    );
+    await mkdir(path.join(root, "apps", "web"), { recursive: true });
+    await writeFile(
+      path.join(root, "apps", "web", "package.json"),
+      JSON.stringify({
+        name: "web",
+        scripts: {
+          test: "vitest"
+        },
+        dependencies: {
+          next: "latest"
+        }
+      }),
+      "utf8"
+    );
+
+    await generateRepositoryContext(root, { mode: "init" });
+
+    const agents = await readFile(path.join(root, "AGENTS.md"), "utf8");
+
+    assert.match(agents, /## Workspaces/);
+    assert.match(agents, /\| apps\/web \| web \| Node\.js, Next\.js \| npm --workspace web test \|/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

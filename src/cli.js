@@ -129,6 +129,7 @@ async function scanCommand(cwd, options) {
   console.log(`Package managers: ${result.packageManagers.length ? result.packageManagers.join(", ") : "unknown"}`);
   console.log(`Build command: ${result.commands.build ?? "not detected"}`);
   console.log(`Test command: ${result.commands.test ?? "not detected"}`);
+  console.log(`Workspaces: ${result.workspaces.length ? result.workspaces.map((workspace) => workspace.path).join(", ") : "none detected"}`);
   console.log(`Docs: ${result.docs.length ? result.docs.join(", ") : "none detected"}`);
 }
 
@@ -200,6 +201,7 @@ async function buildReport(cwd) {
     packageManagers: scan.packageManagers,
     testCommand: scan.commands.test ?? null,
     lintCommand: scan.commands.lint ?? null,
+    workspaces: scan.workspaces,
     contextFiles: await detectContextFiles(scan.root),
     doctorWarnings
   };
@@ -229,7 +231,7 @@ function renderMarkdownReport(result) {
     ? result.doctorWarnings.map((issue) => issue.message).join("; ")
     : "none";
 
-  return [
+  const lines = [
     "## Repository Context",
     `- Repository: ${result.repository}`,
     `- Stack: ${result.stack.length ? result.stack.join(", ") : "unknown"}`,
@@ -238,7 +240,21 @@ function renderMarkdownReport(result) {
     `- Lint: ${result.lintCommand ?? "not detected"}`,
     `- AI context: ${result.contextFiles.length ? result.contextFiles.join(", ") : "none detected"}`,
     `- Doctor warnings: ${warnings}`
-  ].join("\n");
+  ];
+
+  if (result.workspaces.length) {
+    lines.push(
+      "",
+      "## Workspaces",
+      "| Path | Name | Stack | Test |",
+      "| --- | --- | --- | --- |",
+      ...result.workspaces.map((workspace) =>
+        `| ${workspace.path} | ${workspace.name} | ${workspace.stack.join(", ")} | ${workspace.commands.test ?? "not detected"} |`
+      )
+    );
+  }
+
+  return lines.join("\n");
 }
 
 function printGenerationResult(result, options) {

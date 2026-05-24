@@ -157,6 +157,45 @@ test("report --json prints parseable context with doctor warnings", async () => 
   }
 });
 
+test("report includes detected workspaces", async () => {
+  const root = await createRepo();
+
+  try {
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "monorepo-demo",
+        workspaces: ["apps/*"],
+        scripts: {
+          test: "node --test"
+        }
+      }),
+      "utf8"
+    );
+    await mkdir(path.join(root, "apps", "web"), { recursive: true });
+    await writeFile(
+      path.join(root, "apps", "web", "package.json"),
+      JSON.stringify({
+        name: "web",
+        scripts: {
+          test: "vitest"
+        },
+        dependencies: {
+          next: "latest"
+        }
+      }),
+      "utf8"
+    );
+
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", "--cwd", root]);
+
+    assert.match(stdout, /## Workspaces/);
+    assert.match(stdout, /\| apps\/web \| web \| Node\.js, Next\.js \| npm --workspace web test \|/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("init --preset python writes Python-specific guidance", async () => {
   const root = await createRepo();
 

@@ -4,6 +4,7 @@ export function renderAgentsMd(scan) {
   const docs = scan.docs.length
     ? scan.docs.map((doc) => `- \`docs/${doc}\``).join("\n")
     : "- No existing docs were detected. Start with `docs/README.md`.";
+  const workspaces = renderWorkspaces(scan.workspaces);
   const presetGuidance = renderPresetGuidance(scan.preset);
 
   return `# AGENTS.md
@@ -36,6 +37,7 @@ This file is the first stop for AI coding agents working in this repository.
 ## Documentation Index
 
 ${docs}
+${workspaces}
 ${presetGuidance}
 
 ## Do Not
@@ -198,4 +200,17 @@ function renderPresetGuidance(preset) {
     default:
       return "";
   }
+}
+
+function renderWorkspaces(workspaces = []) {
+  if (!workspaces.length) return "";
+
+  return `
+
+## Workspaces
+
+| Path | Name | Stack | Test |
+| --- | --- | --- | --- |
+${workspaces.map((workspace) => `| ${workspace.path} | ${workspace.name} | ${workspace.stack.join(", ")} | ${workspace.commands.test ?? "not detected"} |`).join("\n")}
+`;
 }

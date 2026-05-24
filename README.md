@@ -95,6 +95,7 @@ Current detection includes:
 - primary package manager and additional package managers
 - framework and language hints
 - build/test/lint/dev commands
+- package workspaces from `package.json` workspace globs
 - existing docs under `docs/`
 
 ### `doctor`
@@ -128,6 +129,8 @@ Prints a copyable repository context report for issues, pull requests, and AI co
 agent-context-kit report
 agent-context-kit report --json
 ```
+
+When package workspaces are detected, the report includes a workspace table with path, package name, stack, and test command.
 
 ### `update`
 

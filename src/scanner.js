@@ -48,6 +48,7 @@ export async function scanRepository(root) {
   const packageManagers = await detectPackageManagers(resolvedRoot);
   const primaryPackageManager = packageManagers[0];
   const commands = detectCommands(packageJson, primaryPackageManager);
+  const workspaces = await discoverWorkspaces(resolvedRoot, packageJson, primaryPackageManager);
 
   return {
     name: packageJson?.name ?? path.basename(resolvedRoot),
@@ -58,6 +59,7 @@ export async function scanRepository(root) {
     packageManagers,
     commands,
     scripts: packageJson?.scripts ?? {},
+    workspaces,
     docs,
     directories: topLevel.filter((entry) => entry.isDirectory()).map((entry) => entry.name),
     paths: {
@@ -65,6 +67,96 @@ export async function scanRepository(root) {
       docsReadme: path.join(resolvedRoot, "docs", "README.md")
     }
   };
+}
+
+async function discoverWorkspaces(root, packageJson, packageManager) {
+  const patterns = workspacePatterns(packageJson);
+  const workspaces = [];
+
+  for (const pattern of patterns) {
+    const candidates = await expandWorkspacePattern(root, pattern);
+    for (const workspaceRoot of candidates) {
+      const workspacePackageJsonPath = path.join(workspaceRoot, "package.json");
+      if (!(await exists(workspacePackageJsonPath))) continue;
+
+      const workspacePackageJson = await readJson(workspacePackageJsonPath);
+      const relativePath = toPosixPath(path.relative(root, workspaceRoot));
+
+      workspaces.push({
+        path: relativePath,
+        name: workspacePackageJson.name ?? relativePath,
+        stack: detectPackageStack(workspacePackageJson),
+        packageManager,
+        commands: workspaceCommands(workspacePackageJson, packageManager)
+      });
+    }
+  }
+
+  return dedupeWorkspaces(workspaces).sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function workspacePatterns(packageJson) {
+  const workspaces = packageJson?.workspaces;
+  if (Array.isArray(workspaces)) return workspaces;
+  if (Array.isArray(workspaces?.packages)) return workspaces.packages;
+  return [];
+}
+
+async function expandWorkspacePattern(root, pattern) {
+  if (!pattern.endsWith("/*")) {
+    const directPath = path.join(root, pattern);
+    return (await isDirectory(directPath)) ? [directPath] : [];
+  }
+
+  const basePath = path.join(root, pattern.slice(0, -2));
+  const entries = await listDirSafe(basePath);
+  return entries
+    .filter((entry) => entry.isDirectory() && !IGNORE_DIRS.has(entry.name))
+    .map((entry) => path.join(basePath, entry.name));
+}
+
+function detectPackageStack(packageJson) {
+  const stack = ["Node.js"];
+  const deps = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies
+  };
+
+  if (deps.react) stack.push("React");
+  if (deps.next) stack.push("Next.js");
+  if (deps.vue) stack.push("Vue");
+  if (deps.vite) stack.push("Vite");
+  if (deps.typescript) stack.push("TypeScript");
+
+  return [...new Set(stack)];
+}
+
+function workspaceCommands(packageJson, packageManager) {
+  const scripts = packageJson.scripts ?? {};
+  const workspaceName = packageJson.name;
+  const commandPrefix = workspaceCommandPrefix(packageManager, workspaceName);
+  const commands = {};
+
+  if (scripts.test) commands.test = `${commandPrefix} test`;
+  if (scripts.build) commands.build = `${commandPrefix} run build`;
+  if (scripts.lint) commands.lint = `${commandPrefix} run lint`;
+  if (scripts.dev) commands.dev = `${commandPrefix} run dev`;
+
+  return commands;
+}
+
+function workspaceCommandPrefix(packageManager, workspaceName) {
+  if (packageManager === "pnpm") return `pnpm --filter ${workspaceName}`;
+  if (packageManager === "yarn") return `yarn workspace ${workspaceName}`;
+  return `npm --workspace ${workspaceName}`;
+}
+
+function dedupeWorkspaces(workspaces) {
+  const byPath = new Map();
+  for (const workspace of workspaces) {
+    byPath.set(workspace.path, workspace);
+  }
+  return [...byPath.values()];
 }
 
 function detectCommands(packageJson, packageManager) {
