@@ -1,0 +1,42 @@
+{
+  "name": "agent-context-kit",
+  "version": "0.1.0",
+  "description": "Generate and maintain AI-friendly repository context files such as AGENTS.md and docs/README.md.",
+  "type": "module",
+  "bin": {
+    "agent-context-kit": "./bin/agent-context-kit.js",
+    "ackit": "./bin/agent-context-kit.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --check bin/agent-context-kit.js && node --check src/*.js && node --check test/*.test.js"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "agents",
+    "codex",
+    "claude",
+    "developer-tools",
+    "documentation"
+  ],
+  "author": "niuxinhuai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/niuxinhuai/agent-context-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/niuxinhuai/agent-context-kit/issues"
+  },
+  "homepage": "https://github.com/niuxinhuai/agent-context-kit#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
+}

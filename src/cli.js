@@ -1,0 +1,153 @@
+import { runDoctor } from "./doctor.js";
+import { generateRepositoryContext } from "./generator.js";
+import { scanRepository } from "./scanner.js";
+
+const COMMANDS = new Set(["init", "scan", "doctor", "update", "help", "--help", "-h"]);
+
+export async function runCli(argv) {
+  const args = argv.slice(2);
+  const command = args[0] ?? "help";
+
+  if (!COMMANDS.has(command)) {
+    throw new Error(`Unknown command "${command}". Run agent-context-kit help.`);
+  }
+
+  const options = parseOptions(args.slice(1));
+  const cwd = options.cwd ?? process.cwd();
+
+  switch (command) {
+    case "init":
+      return initCommand(cwd, options);
+    case "scan":
+      return scanCommand(cwd, options);
+    case "doctor":
+      return doctorCommand(cwd, options);
+    case "update":
+      return updateCommand(cwd, options);
+    case "help":
+    case "--help":
+    case "-h":
+      return helpCommand();
+    default:
+      return helpCommand();
+  }
+}
+
+function parseOptions(args) {
+  const options = {
+    force: false,
+    json: false,
+    dryRun: false,
+    cwd: undefined
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--force" || arg === "-f") {
+      options.force = true;
+    } else if (arg === "--json") {
+      options.json = true;
+    } else if (arg === "--dry-run") {
+      options.dryRun = true;
+    } else if (arg === "--cwd") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--cwd requires a path.");
+      }
+      options.cwd = value;
+      index += 1;
+    } else {
+      throw new Error(`Unknown option "${arg}".`);
+    }
+  }
+
+  return options;
+}
+
+async function initCommand(cwd, options) {
+  const result = await generateRepositoryContext(cwd, {
+    force: options.force,
+    dryRun: options.dryRun,
+    mode: "init"
+  });
+
+  printGenerationResult(result, options);
+}
+
+async function updateCommand(cwd, options) {
+  const result = await generateRepositoryContext(cwd, {
+    force: true,
+    dryRun: options.dryRun,
+    mode: "update"
+  });
+
+  printGenerationResult(result, options);
+}
+
+async function scanCommand(cwd, options) {
+  const result = await scanRepository(cwd);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  console.log(`Repository: ${result.name}`);
+  console.log(`Root: ${result.root}`);
+  console.log(`Detected stack: ${result.stack.length ? result.stack.join(", ") : "unknown"}`);
+  console.log(`Package manager: ${result.packageManager ?? "unknown"}`);
+  console.log(`Build command: ${result.commands.build ?? "not detected"}`);
+  console.log(`Test command: ${result.commands.test ?? "not detected"}`);
+  console.log(`Docs: ${result.docs.length ? result.docs.join(", ") : "none detected"}`);
+}
+
+async function doctorCommand(cwd, options) {
+  const result = await runDoctor(cwd);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (result.issues.length === 0) {
+    console.log("No issues found. Repository context looks healthy.");
+    return;
+  }
+
+  for (const issue of result.issues) {
+    console.log(`[${issue.severity}] ${issue.message}`);
+    if (issue.fix) {
+      console.log(`  fix: ${issue.fix}`);
+    }
+  }
+}
+
+function printGenerationResult(result, options) {
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  for (const file of result.files) {
+    const action = file.skipped ? "skipped" : options.dryRun ? "would write" : "wrote";
+    console.log(`${action}: ${file.path}`);
+  }
+}
+
+function helpCommand() {
+  console.log(`agent-context-kit
+
+Usage:
+  agent-context-kit init [--force] [--dry-run] [--cwd <path>]
+  agent-context-kit update [--dry-run] [--cwd <path>]
+  agent-context-kit scan [--json] [--cwd <path>]
+  agent-context-kit doctor [--json] [--cwd <path>]
+
+Commands:
+  init     Generate AGENTS.md and docs/README.md without overwriting existing files.
+  update   Regenerate managed context files.
+  scan     Print detected project stack, package manager, commands, and docs.
+  doctor   Check whether AI-facing context files are missing or inconsistent.
+`);
+}
