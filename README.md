@@ -95,6 +95,8 @@ agent-context-kit doctor --json
 agent-context-kit doctor --strict
 ```
 
+Current checks include missing context files, missing or stale npm scripts in docs, local absolute paths in AI instructions, and risky files already tracked by Git such as `.env`, `*.pem`, `*.key`, `node_modules/`, `dist/`, `coverage/`, and `.DS_Store`.
+
 Use `--strict` in CI when warnings should fail the job.
 
 ### `explain`

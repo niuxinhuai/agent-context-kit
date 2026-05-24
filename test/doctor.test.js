@@ -1,9 +1,13 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runDoctor } from "../src/doctor.js";
+
+const execFileAsync = promisify(execFile);
 
 async function createRepo() {
   const root = await mkdtemp(path.join(os.tmpdir(), "ackit-"));
@@ -81,6 +85,41 @@ test("runDoctor reports README commands that are not present in package scripts"
     const result = await runDoctor(root);
 
     assert.ok(result.issues.some((issue) => issue.code === "unknown-readme-script"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("runDoctor reports risky files tracked by git", async () => {
+  const root = await createRepo();
+
+  try {
+    await mkdir(path.join(root, "dist"), { recursive: true });
+    await mkdir(path.join(root, "apps", "web"), { recursive: true });
+    await mkdir(path.join(root, "packages", "core", "coverage"), { recursive: true });
+    await writeFile(path.join(root, ".env"), "TOKEN=secret\n", "utf8");
+    await writeFile(path.join(root, ".DS_Store"), "metadata\n", "utf8");
+    await writeFile(path.join(root, "apps", "web", ".env.local"), "TOKEN=secret\n", "utf8");
+    await writeFile(path.join(root, "dist", "app.js"), "console.log('built');\n", "utf8");
+    await writeFile(path.join(root, "packages", "core", "coverage", "report.json"), "{}\n", "utf8");
+
+    await execFileAsync("git", ["init"], { cwd: root });
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    await execFileAsync("git", ["add", "-f", ".DS_Store"], { cwd: root });
+
+    const result = await runDoctor(root);
+    const riskyPaths = result.issues
+      .filter((issue) => issue.code === "tracked-risk-file")
+      .map((issue) => issue.path)
+      .sort();
+
+    assert.deepEqual(riskyPaths, [
+      ".DS_Store",
+      ".env",
+      "apps/web/.env.local",
+      "dist/app.js",
+      "packages/core/coverage/report.json"
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

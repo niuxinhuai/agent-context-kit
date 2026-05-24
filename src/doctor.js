@@ -1,8 +1,20 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { exists, readText } from "./fs-utils.js";
 import { scanRepository } from "./scanner.js";
 
+const execFileAsync = promisify(execFile);
 const LOCAL_ABSOLUTE_PATH_PATTERN = /(?:\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:\\Users\\[^\\\s]+)/;
 const NPM_RUN_SCRIPT_PATTERN = /\bnpm\s+run\s+([a-zA-Z0-9:_-]+)/g;
+const RISKY_TRACKED_FILE_PATTERNS = [
+  /(^|\/)\.env(?:\.|$)/,
+  /\.pem$/i,
+  /\.key$/i,
+  /(^|\/)node_modules\//,
+  /(^|\/)dist\//,
+  /(^|\/)coverage\//,
+  /(^|\/)\.DS_Store$/
+];
 
 export async function runDoctor(root) {
   const scan = await scanRepository(root);
@@ -87,10 +99,34 @@ export async function runDoctor(root) {
     }
   }
 
+  for (const filePath of await listTrackedRiskyFiles(scan.root)) {
+    issues.push({
+      code: "tracked-risk-file",
+      severity: "warn",
+      path: filePath,
+      message: `${filePath} is tracked by git and looks like a secret, local artifact, or build output.`,
+      fix: "Remove it from git history/index when appropriate and add it to .gitignore."
+    });
+  }
+
   return {
     root: scan.root,
     issues
   };
+}
+
+async function listTrackedRiskyFiles(root) {
+  let stdout;
+  try {
+    ({ stdout } = await execFileAsync("git", ["ls-files"], { cwd: root }));
+  } catch {
+    return [];
+  }
+
+  return stdout
+    .split("\n")
+    .filter(Boolean)
+    .filter((filePath) => RISKY_TRACKED_FILE_PATTERNS.some((pattern) => pattern.test(filePath)));
 }
 
 function findUnknownNpmScripts(text, scripts) {
