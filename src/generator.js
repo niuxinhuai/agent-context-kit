@@ -1,23 +1,16 @@
 import path from "node:path";
 import { exists, readText, writeText } from "./fs-utils.js";
 import { scanRepository } from "./scanner.js";
-import { renderAgentsMd, renderDocsReadme } from "./templates.js";
+import { renderAgentsMd, renderClaudeMd, renderCodexMd, renderCursorRules, renderDocsReadme } from "./templates.js";
 
 const MANAGED_START = "<!-- agent-context-kit:start -->";
 const MANAGED_END = "<!-- agent-context-kit:end -->";
+const DEFAULT_TARGET = "agents";
+const SUPPORTED_TARGETS = new Set(["agents", "claude", "cursor", "codex", "docs", "all"]);
 
 export async function generateRepositoryContext(root, options = {}) {
   const scan = await scanRepository(root);
-  const targets = [
-    {
-      path: path.join(scan.root, "AGENTS.md"),
-      content: renderAgentsMd(scan)
-    },
-    {
-      path: path.join(scan.root, "docs", "README.md"),
-      content: renderDocsReadme(scan)
-    }
-  ];
+  const targets = buildTargets(scan, options.target ?? DEFAULT_TARGET);
 
   const files = [];
 
@@ -46,6 +39,64 @@ export async function generateRepositoryContext(root, options = {}) {
     root: scan.root,
     files
   };
+}
+
+export function getSupportedTargets() {
+  return [...SUPPORTED_TARGETS];
+}
+
+function buildTargets(scan, target) {
+  if (!SUPPORTED_TARGETS.has(target)) {
+    throw new Error(`Unknown target "${target}". Supported targets: ${getSupportedTargets().join(", ")}.`);
+  }
+
+  const targetDefinitions = {
+    agents: [
+      {
+        path: path.join(scan.root, "AGENTS.md"),
+        content: renderAgentsMd(scan)
+      },
+      {
+        path: path.join(scan.root, "docs", "README.md"),
+        content: renderDocsReadme(scan)
+      }
+    ],
+    claude: [
+      {
+        path: path.join(scan.root, "CLAUDE.md"),
+        content: renderClaudeMd(scan)
+      }
+    ],
+    cursor: [
+      {
+        path: path.join(scan.root, ".cursor", "rules", "agent-context.mdc"),
+        content: renderCursorRules(scan)
+      }
+    ],
+    codex: [
+      {
+        path: path.join(scan.root, ".codex", "AGENTS.md"),
+        content: renderCodexMd(scan)
+      }
+    ],
+    docs: [
+      {
+        path: path.join(scan.root, "docs", "README.md"),
+        content: renderDocsReadme(scan)
+      }
+    ]
+  };
+
+  if (target === "all") {
+    return [
+      ...targetDefinitions.agents,
+      ...targetDefinitions.claude,
+      ...targetDefinitions.cursor,
+      ...targetDefinitions.codex
+    ];
+  }
+
+  return targetDefinitions[target];
 }
 
 function wrapManagedContent(content) {

@@ -1,5 +1,5 @@
 import { runDoctor } from "./doctor.js";
-import { generateRepositoryContext } from "./generator.js";
+import { generateRepositoryContext, getSupportedTargets } from "./generator.js";
 import { scanRepository } from "./scanner.js";
 
 const COMMANDS = new Set(["init", "scan", "doctor", "update", "explain", "help", "--help", "-h"]);
@@ -41,6 +41,7 @@ function parseOptions(args) {
     json: false,
     dryRun: false,
     strict: false,
+    target: undefined,
     cwd: undefined
   };
 
@@ -55,6 +56,13 @@ function parseOptions(args) {
       options.dryRun = true;
     } else if (arg === "--strict") {
       options.strict = true;
+    } else if (arg === "--target") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--target requires a value.");
+      }
+      options.target = value;
+      index += 1;
     } else if (arg === "--cwd") {
       const value = args[index + 1];
       if (!value) {
@@ -74,6 +82,7 @@ async function initCommand(cwd, options) {
   const result = await generateRepositoryContext(cwd, {
     force: options.force,
     dryRun: options.dryRun,
+    target: options.target,
     mode: "init"
   });
 
@@ -84,6 +93,7 @@ async function updateCommand(cwd, options) {
   const result = await generateRepositoryContext(cwd, {
     force: true,
     dryRun: options.dryRun,
+    target: options.target,
     mode: "update"
   });
 
@@ -171,7 +181,8 @@ function helpCommand() {
 
 Usage:
   agent-context-kit init [--force] [--dry-run] [--cwd <path>]
-  agent-context-kit update [--dry-run] [--cwd <path>]
+  agent-context-kit init [--target agents|claude|cursor|codex|all] [--cwd <path>]
+  agent-context-kit update [--target agents|claude|cursor|codex|all] [--dry-run] [--cwd <path>]
   agent-context-kit scan [--json] [--cwd <path>]
   agent-context-kit doctor [--json] [--strict] [--cwd <path>]
   agent-context-kit explain [--json] [--cwd <path>]
@@ -182,5 +193,8 @@ Commands:
   scan     Print detected project stack, package manager, commands, and docs.
   doctor   Check whether AI-facing context files are missing or inconsistent.
   explain  Print a short human-readable repository summary.
+
+Targets:
+  ${getSupportedTargets().join(", ")}
 `);
 }

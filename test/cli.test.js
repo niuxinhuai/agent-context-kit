@@ -97,3 +97,18 @@ test("doctor --strict exits non-zero when warnings are found", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("init --target cursor writes Cursor rules", async () => {
+  const root = await createRepo();
+
+  try {
+    const { stdout } = await execFileAsync(process.execPath, [cliPath, "init", "--target", "cursor", "--cwd", root]);
+    const cursorRules = await readFile(path.join(root, ".cursor", "rules", "agent-context.mdc"), "utf8");
+
+    assert.match(stdout, /agent-context\.mdc/);
+    assert.match(cursorRules, /description:/);
+    assert.match(cursorRules, /agent-context-kit:start/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -120,3 +120,45 @@ test("update migrates legacy generated files without duplicating content", async
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("init with target claude writes only CLAUDE.md", async () => {
+  const root = await createRepo();
+
+  try {
+    const result = await generateRepositoryContext(root, { mode: "init", target: "claude" });
+
+    const claude = await readFile(path.join(root, "CLAUDE.md"), "utf8");
+
+    assert.match(claude, /<!-- agent-context-kit:start -->/);
+    assert.match(claude, /# CLAUDE\.md/);
+    assert.deepEqual(
+      result.files.map((file) => path.relative(root, file.path)),
+      ["CLAUDE.md"]
+    );
+    await assert.rejects(readFile(path.join(root, "AGENTS.md"), "utf8"));
+    await assert.rejects(readFile(path.join(root, "docs", "README.md"), "utf8"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init with target all writes every supported AI context target", async () => {
+  const root = await createRepo();
+
+  try {
+    const result = await generateRepositoryContext(root, { mode: "init", target: "all" });
+    const files = result.files.map((file) => path.relative(root, file.path)).sort();
+
+    assert.deepEqual(files, [
+      ".codex/AGENTS.md",
+      ".cursor/rules/agent-context.mdc",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/README.md"
+    ]);
+    assert.match(await readFile(path.join(root, ".cursor", "rules", "agent-context.mdc"), "utf8"), /description:/);
+    assert.match(await readFile(path.join(root, ".codex", "AGENTS.md"), "utf8"), /# Codex Instructions/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -54,7 +54,19 @@ It will not overwrite existing files unless `--force` is passed.
 agent-context-kit init
 agent-context-kit init --force
 agent-context-kit init --dry-run
+agent-context-kit init --target claude
+agent-context-kit init --target cursor
+agent-context-kit init --target codex
+agent-context-kit init --target all
 ```
+
+Targets:
+
+- `agents`: `AGENTS.md` and `docs/README.md`
+- `claude`: `CLAUDE.md`
+- `cursor`: `.cursor/rules/agent-context.mdc`
+- `codex`: `.codex/AGENTS.md`
+- `all`: every supported target
 
 ### `scan`
 

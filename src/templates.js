@@ -52,6 +52,24 @@ ${docs}
 `;
 }
 
+export function renderClaudeMd(scan) {
+  return renderAgentInstructions(scan, "CLAUDE.md", "Claude Code");
+}
+
+export function renderCodexMd(scan) {
+  return renderAgentInstructions(scan, "Codex Instructions", "Codex");
+}
+
+export function renderCursorRules(scan) {
+  return `---
+description: AI coding agent context for ${scan.name}
+alwaysApply: true
+---
+
+${renderAgentInstructions(scan, "Cursor Agent Context", "Cursor").trimEnd()}
+`;
+}
+
 export function renderDocsReadme(scan) {
   const docs = scan.docs.filter((doc) => doc !== "README.md");
   const docList = docs.length
@@ -107,4 +125,26 @@ function installCommand(packageManager) {
     default:
       return "not detected; document this when known";
   }
+}
+
+function renderAgentInstructions(scan, title, agentName) {
+  return `# ${title}
+
+This file gives ${agentName} the repository context needed before editing code.
+
+## Repository
+
+- Project: ${scan.name}
+- Stack: ${scan.stack.length ? scan.stack.join(" / ") : "not detected yet"}
+- Primary package manager: ${scan.primaryPackageManager ?? scan.packageManager ?? "not detected"}
+- Test command: ${scan.commands.test ?? "not detected; document this when known"}
+
+## Working Rules
+
+- Read \`AGENTS.md\` when it exists.
+- Prefer existing project patterns over new abstractions.
+- Keep edits scoped to the requested behavior.
+- Run the smallest meaningful verification command before handing off.
+- Do not commit secrets, local environment files, build artifacts, or generated files unless explicitly requested.
+`;
 }
